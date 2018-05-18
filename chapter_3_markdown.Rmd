@@ -1,0 +1,304 @@
+---
+title : "데이터마이닝 3장 과제풀이 - 4조"
+author : 32152827 정치외교학과 유승훈<br />
+         32154499 경영학과 조현진<br />
+         32160175 응용통계학과 고준성
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### 준비과정
+### 패키지 로드
+```{r,echo = FALSE, message = FALSE, warning = FALSE}
+pkgs <- c('dplyr','ggplot2','readxl',
+          'stringr','lubridate','ggmap','Hmisc','ellipse',
+          'lattice','GGally','spatstat')
+sapply(pkgs,require,character.only = TRUE)
+```
+
+### Working directory 설정
+### 데이터 불러오기
+```{r,echo = FALSE, message = FALSE}
+lap_2008 <- read_xlsx('C:/Users/Seung Hun/Desktop/데이터마이닝/LaptopSalesJanuary2008.xlsx',
+                      sheet = 2)
+lap_2008 <- as.data.frame(lap_2008)
+```
+
+### 3. 런던 컴퓨터 체인점의 노트북 판매실적: 막대차트와 박스플롯
+### 문제 a. 매장별 평균 소매가
+```{r, echo = FALSE, fig.width = 10}
+lap_2008 %>% group_by(`Store Postcode`) %>%
+  summarise(a = mean(`Retail Price`)) %>%
+  ggplot(aes(reorder(`Store Postcode`,a),a,group = a)) +
+  geom_bar(stat = 'identity') +
+  coord_cartesian(ylim = c(450,500)) + ylab("Mean Price") + xlab('Store')
+```
+
+### 문제 b. 두 매장별 소매가 비교를 위한 boxplot
+```{r, echo = FALSE, fig.width = 10}
+lap_2008 %>% filter(`Store Postcode` %in% c('W4 3PH','N17 6QA')) %>%
+  ggplot(aes(`Store Postcode`,`Retail Price`,group = `Store Postcode`)) +
+  stat_boxplot(geom = 'errorbar',width = 0.3) +
+  geom_boxplot(notch = TRUE)
+```
+
+### 3.4 런던 컴퓨터 체인점의 노트북 판매실적: 대화형 시각화
+### 데이터 로드
+```{r, echo = FALSE, message = FALSE}
+lap_sale <- read.table('C:/Users/Seung Hun/Desktop/데이터마이닝/LaptopSales.txt',sep = "\t",header = TRUE)
+lap_sale$Date_my <- dmy_hms(lap_sale$Date)
+```
+
+### a.i 실제로 노트북은 얼마에 판매되었는가?
+```{r, echo = FALSE, fig.width = 10}
+boxplot(lap_sale$Retail.Price,ylab = 'Price',main = 'Price Boxplot')
+```
+
+### a.ii 시간에 따라서 판매 가격이 변화하였는가?
+#### 일자별
+```{r, echo = FALSE, fig.width = 10, warning = FALSE}
+lap_sale %>% mutate(da = day(Date_my)) %>%
+  group_by(da) %>% 
+  summarise(a = mean(Retail.Price,na.rm = TRUE)) %>%
+  ggplot(aes(da,a,group = 1)) + geom_bar(stat = 'identity') +
+  coord_cartesian(ylim = c(500,530)) + xlab('Day') + ylab('Mean Retail Price')
+```
+
+#### 월별
+```{r, echo = FALSE, fig.width = 10}
+lap_sale %>% mutate(da = month(Date_my)) %>%
+  mutate(da = factor(str_replace_na(da),levels = c(seq(1,12,1),'NA'))) %>%
+  group_by(da) %>%  summarise(a = mean(Retail.Price,na.rm = TRUE)) %>%
+  ggplot(aes(da,a,group = 1)) + geom_bar(stat = 'identity') +
+  coord_cartesian(ylim = c(440,545)) + xlab('Month') + ylab('Mean Retail Price')
+```
+
+#### 시간별
+```{r, echo = FALSE, fig.width = 10}
+lap_sale %>% mutate(da = time(Date_my)) %>%
+  mutate(da = factor(str_replace_na(da),levels = c(seq(1,12,1),'NA'))) %>%
+  group_by(da) %>%  summarise(a = mean(Retail.Price,na.rm = TRUE)) %>%
+  ggplot(aes(da,a,group = 1)) + geom_bar(stat = 'identity') +
+  coord_cartesian(ylim = c(350,670)) + xlab('Time(hour)') + ylab('Mean Retail Price')
+```
+
+### a.iii 판매가격은 각 매장별로 일관성이 있는가?
+#### 박스플롯
+```{r, echo = FALSE, fig.width = 10, warning = FALSE}
+lap_sale %>% ggplot(aes(Store.Postcode,Retail.Price,
+                        group = Store.Postcode)) +
+  stat_boxplot(geom = 'errorbar',width = 0.5) +
+  geom_boxplot(outlier.alpha = 0.3)
+```
+
+#### 박스만 확대하면
+```{r, echo = FALSE, fig.width = 10, warning = FALSE}
+lap_sale %>% ggplot(aes(Store.Postcode,Retail.Price,
+                        group = Store.Postcode)) +
+  geom_boxplot(notch = TRUE) + coord_cartesian(ylim = c(300,630))
+```
+
+### a.iv 판매가격은 컴퓨터 사양에 따라 어떻게 다른가?
+#### 화면크기
+```{r, echo = FALSE, fig.width = 10}
+lap_sale %>% group_by(Screen.Size..Inches.) %>%
+  summarise(a = mean(Retail.Price,na.rm = TRUE)) %>%
+  ggplot(aes(factor(Screen.Size..Inches.),a,group = Screen.Size..Inches.)) +
+  geom_bar(stat = 'identity') + coord_cartesian(ylim = c(400,560)) +
+  xlab('Screen Size') + ylab('Mean Retail Price')
+```
+
+#### 배터리
+```{r, echo = FALSE, fig.width = 10}
+lap_sale %>% group_by(Battery.Life..Hours.) %>%
+  summarise(a = mean(Retail.Price,na.rm = TRUE)) %>%
+  ggplot(aes(Battery.Life..Hours.,a,group = Battery.Life..Hours.)) +
+  geom_bar(stat = 'identity') + coord_cartesian(ylim = c(450,550)) +
+  xlab('Battery') + ylab('Mean Retail Price')
+```
+
+#### 램(메모리) 크기
+```{r, echo = FALSE, fig.width = 10}
+lap_sale %>% group_by(RAM..GB.) %>%
+  summarise(a = mean(Retail.Price,na.rm = TRUE)) %>%
+  ggplot(aes(factor(RAM..GB.),a,group = RAM..GB.)) +
+  geom_bar(stat = 'identity') +
+  xlab('Memory') + ylab('Mean Retail Price')
+```
+
+#### CPU 성능
+```{r, echo = FALSE, fig.width = 10}
+lap_sale %>% group_by(Processor.Speeds..GHz.) %>%
+  summarise(a = mean(Retail.Price,na.rm = TRUE)) %>%
+  ggplot(aes(factor(Processor.Speeds..GHz.),a,group = Processor.Speeds..GHz.)) +
+  geom_bar(stat = 'identity') + coord_cartesian(ylim = c(450,540)) +
+  xlab('CPU performance(GHz)') + ylab('Mean Retail Price')
+```
+
+#### 무선인터넷 여부
+```{r, echo = FALSE, fig.width = 10}
+lap_sale %>% group_by(Integrated.Wireless.) %>%
+  summarise(a = mean(Retail.Price,na.rm = TRUE)) %>%
+  ggplot(aes(Integrated.Wireless.,a,group = Integrated.Wireless.)) +
+  geom_bar(stat = 'identity') + coord_cartesian(ylim = c(500,520)) +
+  xlab('Wireless Internet') + ylab('Mean Retail Price')
+```
+
+#### 하드 사이즈(GB)
+```{r, echo = FALSE, fig.width = 10}
+lap_sale %>% group_by(HD.Size..GB.) %>%
+  summarise(a = mean(Retail.Price,na.rm = TRUE)) %>%
+  ggplot(aes(factor(HD.Size..GB.),a,group = HD.Size..GB.)) +
+  geom_bar(stat = 'identity') + xlab('Hard size(GB)') + ylab('Mean Retail Price')
+```
+
+#### 프로그램 포함 여부
+```{r ,echo = FALSE, fig.width = 10}
+lap_sale %>% group_by(Bundled.Applications.) %>%
+  summarise(a = mean(Retail.Price,na.rm = TRUE)) %>%
+  ggplot(aes(Bundled.Applications.,a,group = Bundled.Applications.)) +
+  geom_bar(stat = 'identity') + coord_cartesian(ylim = c(470,530)) +
+  xlab('Bundled Applications') + ylab('Mean Retail Price')
+```
+
+```{r load londonfi,echo = FALSE,cache=TRUE}
+setwd('C:/Users/Seung Hun/Desktop/rstudio-export')
+store <- read.csv('store.csv')
+customer <- read.csv('customer.csv')
+
+loon <- rbind(store[,2:3],customer[,2:3])
+loon <- cbind(loon,wh = c(rep('store',nrow(store)),rep('customer',nrow(customer))))
+
+lon <- get_map(location="london", zoom=11, maptype='terrain', source='google', color='color')
+```
+
+### b.i 매장의 위치와 고객의 위치는 어디인가?
+```{r, echo = FALSE, warning = FALSE, fig.width = 10}
+place <- ggmap(lon) +
+         geom_point(data = loon,aes(lon,lat,col = wh)) +
+         scale_color_manual(values = c(alpha('red',0.4),'black'))
+place
+```
+
+### b.ii 어느 매장이 가장 많이 판매하는가?
+### 많이 판매의 기준
+#### 빈도?
+```{r, echo = FALSE, fig.width = 10}
+lap_sale %>% group_by(Store.Postcode) %>%
+  summarise(a = n()) %>% ggplot(aes(Store.Postcode,a,group = Store.Postcode)) +
+  geom_bar(stat = 'identity') + ylab('Sale Frequency')
+```
+
+#### 평균판매가격?
+```{r, echo = FALSE, fig.width = 10}
+lap_sale %>% group_by(Store.Postcode) %>%
+  summarise(a = mean(Retail.Price,na.rm = TRUE)) %>%
+  ggplot(aes(Store.Postcode,a,group = Store.Postcode)) +
+  geom_bar(stat = 'identity') + coord_cartesian(ylim = c(400,530)) +
+  ylab('Mean Retail Price')
+```
+
+### b.iii 고객은 컴퓨터를 사기 위해서 얼마나 이동해야 하는가?
+```{r, echo = FALSE, warning = FALSE, fig.width = 10}
+place + geom_point(data = store,aes(lon,lat),alpha = 0.4,size = 35)
+```
+
+### b.iv 고객이 매장으로 얼마나 이동하는가? 거리를 계산해보자.
+### 변수만들기
+```{r, echo = FALSE, fig.width = 10}
+cust <- customer[complete.cases(customer),]
+st <- store[complete.cases(store),]
+a <- vector(length = nrow(cust))
+dist <- vector(length = nrow(cust))
+
+for(i in 1:nrow(cust)){
+  tem <- rbind(st[,2:3],cust[i,2:3])
+  a[i] <- nnwhich(tem)[nrow(tem)]
+  dist[i] <- nndist(tem)[nrow(tem)]
+}
+
+```
+
+### 가장 가까운 매장 통계
+```{r, echo = FALSE, fig.width = 10}
+summ <- data.frame(table(a)) 
+summ %>% ggplot(aes(a,Freq,group = a)) +
+  geom_bar(stat = 'identity') + xlab('Cloest Store') +
+  scale_x_discrete(labels = unique(st$as.character.unique.lap_sale.Store.Postcode..))
+```
+
+### 거리 통계
+### 거리의 분포
+```{r, echo = FALSE}
+boxplot(dist,ylim = c(0,0.08),xlab = "Store Distance")
+```
+
+<br />
+### 지역별 주소구분
+### 런던은 크게 8개 지역으로 나누어짐
+### customer postcode의 첫번째 글자별 거리 평균(한국의 시)
+```{r, echo = FALSE,fig.width = 10}
+aaa <- data.frame(dist = dist,
+                  code = cust$as.character.unique.lap_sale.Customer.Postcode..,
+                  near = st$as.character.unique.lap_sale.Store.Postcode..[a])
+aaa$new_code <- ifelse(str_detect(str_sub(aaa$code,1,2),"[:digit:]") == TRUE,
+                       str_sub(aaa$code,1,1),str_sub(aaa$code,1,2))
+aaa %>% group_by(new_code) %>% summarise(a = mean(dist)) %>%
+  ggplot() + geom_bar(aes(new_code,a),stat = 'identity') + xlab('New_post') +
+  ylab('Average Distance')
+```
+
+### 가장 가까운 매장별 통계
+### b.iii에서 그린 원 밖의 점이 있는 매장이 Outlier라고 볼 수 있음.
+```{r,echo = FALSE, fig.width = 10}
+aaa %>% group_by(near) %>% summarise(a = mean(dist)) %>%
+  ggplot(aes(near,a)) + geom_bar(stat = 'identity') +
+  coord_cartesian(ylim = c(0,1)) + xlab('Store') + ylab('Average Distance')
+```
+
+### c.i 각 매장에 매출액이 Acell사 전체 매출액과 어떤 연관성이 있는가?
+```{r, echo = FALSE, fig.width = 10}
+lap_sale$time <- hour(lap_sale$Date_my)
+sale <- lap_sale %>% group_by(time,Store.Postcode) %>%
+              summarise(a = mean(Retail.Price,na.rm = TRUE))
+
+sale2 <- lap_sale %>% group_by(time) %>%
+  summarise(a = mean(Retail.Price,na.rm = TRUE))
+
+par(mfrow = c(2,4))
+for(i in 1:8){
+  b <- which(sale$Store.Postcode == unique(sale$Store.Postcode)[i])
+  plot(sale$time[b],sale$a[b],col = "red",ylim = c(400,550),
+       xlab = "time",ylab = unique(sale$Store.Postcode)[i])
+  points(sale2$time,sale2$a)
+}
+
+par(mfrow = c(2,4))
+for(i in 9:16){
+  b <- which(sale$Store.Postcode == unique(sale$Store.Postcode)[i])
+  plot(sale$time[b],sale$a[b],col = "red",ylim = c(400,550),
+       xlab = "time",ylab = unique(sale$Store.Postcode)[i])
+  points(sale2$time,sale2$a)
+}
+```
+
+### c.ii & di
+### 이 컴퓨터 사양과 판매가격은 관련성이 있는가?
+### corrplot & heatmap
+```{r,echo = FALSE, fig.width = 10,warning=FALSE}
+lap_sale[,c(10,12)] <- as.character(lap_sale[,c(10,12)])
+lap_sale[,c(10,12)] <- ifelse(lap_sale[,c(10,12)] == "Yes",1,0)
+
+plotcorr(cor(lap_sale[,c(5,6:12)]),main = 'Retail Price by components')
+heatmap(cor(lap_sale[,c(5,6:12)]),Rowv = NA,Colv = NA,fil)
+```
+
+### d.ii 모든 매장들이 모든 컴퓨터 사양을 취급하는가?
+### 모든 매장이 모든 컴퓨터 사양을 취급한다.
+```{r}
+apply(lap_sale[6:12],2,function(x)table(lap_sale$Store.Postcode,x))
+```
+
+
