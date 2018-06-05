@@ -26,5 +26,5 @@ old_num <- old %>% group_by(영화명) %>%
 old_txt <- old[,c(2,3,7,8)]
 old_txt <- old_txt[!duplicated(old_txt[,1]),]
 
-old <- cbind(old_txt,old_num)
+old <- left_join(old_num,old_txt)
 # write.csv(old,'C:/Users/Seung Hun/Desktop/dataming_project/data/old.csv')
