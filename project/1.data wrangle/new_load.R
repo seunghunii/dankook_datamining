@@ -43,18 +43,21 @@ df <- df[!is.na(df[,2]),]
 colnames(df) <- df[1,]
 df <- df[df[,1] != '순위',]
 df <- df[,c(2,3,9,13,14,15,17,18)]
-df[,c(3,4,5)] <- lapply(df[,c(3,4,5)],as.numeric)
+df[,c(2,3,4,5)] <- lapply(df[,c(2,3,4,5)],as.numeric)
+colnames(df) <- c(colnames(df)[-8],'play')
+df$개봉일 <- as.Date(df$개봉일,origin = '1899-12-30')
 
 df_num <- df %>% group_by(영화명) %>%
   summarise(screen = sum(스크린수),
             playtt = sum(상영횟수),
             people = sum(관객수),
-            wekkk = min('17371'))
+            wekkk = min(play),
+            playwk = length(영화명))
 
 df_txt <- df[,c(1,2,6,7)]
 df_txt <- df_txt[!duplicated(df_txt[,1]),]
 
 df <- left_join(df_num,df_txt,by = '영화명')
 
-# write.csv(df,'C:/Users/Seung Hun/Desktop/dataming_project/data/new.csv')
+write.csv(df,'C:/Users/Seung Hun/Desktop/dataming_project/data/new.csv')
 

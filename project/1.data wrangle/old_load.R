@@ -21,10 +21,11 @@ old_num <- old %>% group_by(영화명) %>%
   summarise(screen = sum(스크린수),
             playtt = sum(상영횟수),
             people = sum(관객수),
-            weekkk = min(week))
+            weekkk = min(week),
+            playwk = length(영화명))
 
 old_txt <- old[,c(2,3,7,8)]
 old_txt <- old_txt[!duplicated(old_txt[,1]),]
 
-old <- left_join(old_num,old_txt)
-# write.csv(old,'C:/Users/Seung Hun/Desktop/dataming_project/data/old.csv')
+old <- left_join(old_num,old_txt,by = '영화명')
+write.csv(old,'C:/Users/Seung Hun/Desktop/dataming_project/data/old.csv')
