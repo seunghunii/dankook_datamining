@@ -13,7 +13,7 @@ colnames(bos) <- tolower(colnames(bos))
 # 더미변수 함수 만들기
 dum <- function(x,name = ' dummy'){
   idx <- length(unique(x))
-  a <- matrix(nrow = 506,ncol = idx)
+  a <- matrix(nrow = length(x),ncol = idx)
   for(i in 1:idx){
     a[,i] <- ifelse(x == unique(x)[i],1,0)
     assign(paste0('dummy_',name),a,envir = .GlobalEnv)
